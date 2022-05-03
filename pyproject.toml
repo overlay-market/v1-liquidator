@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "v1-liquidator"
+version = "0.1.0"
+description = ""
+authors = ["mikeyrf <23126274+mikeyrf@users.noreply.github.com>"]
+license = "MIT"
+
+[tool.poetry.dependencies]
+python = "^3.7"
+eth-brownie = "^1.18.1"
+
+[tool.poetry.dev-dependencies]
+flake8 = "^4.0.1"
+coverage = "^6.3.2"
+nox = "^2022.1.7"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
