@@ -1,0 +1,10 @@
+__pycache__/
+node_modules/
+.history
+.hypothesis/
+build/
+reports/
+.env
+*.sw[op]
+.DS_Store
+*.bk
