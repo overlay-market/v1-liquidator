@@ -1,14 +1,27 @@
 from itertools import compress
 from brownie import (
     accounts, Contract,
-    chain, multicall
+    chain, multicall, web3
     )
 import json
+import math
+import time
 
 
-def init_account():
-    acc = accounts.load('brownie_acc1')
+def init_account(acc):
+    acc = accounts.load(acc)
     return acc
+
+
+def get_params():
+    '''
+    max_ovl: Swap OVL to WETH when account balance crosses this limit
+    slippage: Slippage allowed for OVL to WETH swap
+    '''
+    return {
+        'max_ovl': 10e18,
+        'slippage': 0.02
+    }
 
 
 def get_contract_adds():
@@ -39,10 +52,6 @@ def get_events(market, start_block, end_block):
                             from_block=start_block,
                             to_block=end_block)
     return events
-
-
-def get_first_pos():
-    return 0
 
 
 def get_all_pos(bld_events):
@@ -95,16 +104,34 @@ def liquidate_pos(positions, market, acc):
     return liqd_pos
 
 
-def main():
+def swap_to_eth(amount, slippage, weth, ovl, router, pool, acc):
+    price_s0 = pool.slot0()[0]
+    ovl_price = (price_s0**2)/(2**(96*2))
+    quote = ovl_price * amount/1e18
+    min_amount = quote * (1 - slippage)
+    params = (ovl.address, weth.address, 3000,
+              acc.address, math.ceil(time.time() + 600),
+              amount, 0, min_amount)
+
+    # One-time approval of spending by router recommended.
+    # Should be done outside this script.
+    router.exactInputSingle(params, {'from': acc})
+
+
+def main(args):
     # Initialize account and contracts
-    acc = init_account()
+    acc = init_account(args)
     print(f'Account {acc.address} loaded')
+    params = get_params()
     market, pool, swap_router, ovl, weth, state = init_contracts()
 
     all_pos = []
-    liqd_pos = []
+    prev_liqd_pos = []
     start_block = 10885983
     while True:
+        if ovl.balanceOf(acc) >= params['max_ovl']:
+            swap_to_eth(ovl.balanceOf(acc), weth, ovl,
+                        swap_router, pool, params['slippage'], acc)
         end_block = chain.height
         if start_block > end_block:
             continue
@@ -112,9 +139,9 @@ def main():
         all_pos += get_all_pos(events.Build)
         liq_pos = get_liq_pos(events.Liquidate)
         unw_pos = get_unw_pos(events.Unwind)
-        remove_pos = liq_pos + unw_pos + liqd_pos
+        remove_pos = liq_pos + unw_pos + prev_liqd_pos
         all_pos = list(set(all_pos) - set(remove_pos))
 
         liqable_pos = is_liquidatable(all_pos, state)
-        liqd_pos += liquidate_pos(liqable_pos)
+        prev_liqd_pos += liquidate_pos(liqable_pos)
         start_block = end_block + 1
