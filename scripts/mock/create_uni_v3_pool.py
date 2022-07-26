@@ -31,4 +31,4 @@ def main(args):
 
     pool = Contract.from_abi('pool', pool_addr, pool_abi)
     pool.initialize(7.9220240490215315e28, {"from": acc})  # price = 1
-    pool.increaseObservationCardinalityNext(310, {"from": acc})
+    pool.increaseObservationCardinalityNext(510, {"from": acc})
