@@ -80,6 +80,7 @@ def swap(args):
         tok1.approve(mint_router, tok1.balanceOf(acc), {'from': acc})
         tok2.approve(mint_router, tok2.balanceOf(acc), {'from': acc})
 
+    i = 0
     while True:
         # 'o' suffix denotes "old" state, prior to swapping
         xo = tok1.balanceOf(pool)
@@ -110,4 +111,6 @@ def swap(args):
         print(f'Price post-swap: {pn}')
         print(f'Obs price delta: {((pn - po)/po) * 100}%')
         print(f'Sleeping for {gap_time} secs')
+        print(f'Swap number: {i+1}')
+        i += 1
         time.sleep(gap_time)
