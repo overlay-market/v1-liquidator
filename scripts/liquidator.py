@@ -1,7 +1,7 @@
 from itertools import compress
 from brownie import (
     accounts, Contract,
-    chain, multicall, web3
+    chain, multicall
     )
 import json
 import math
