@@ -55,7 +55,7 @@ def build(args):
         is_long = random.choice([True, False])
         col = floor(random.uniform(col_lower, col_upper))
         notional = (col * lev)/1e18
-        fee = (notional * market.params(11))/1e18
+        fee = ceil((notional * market.params(11))/1e18)
         approve_spending(ovl, ceil(col + fee), market, acc)
         if is_long:
             price = (2**256)-1
