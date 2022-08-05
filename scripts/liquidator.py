@@ -1,4 +1,5 @@
-from itertools import compress
+from concurrent.futures import ThreadPoolExecutor
+from itertools import compress, chain as ichain
 from brownie import (
     accounts, Contract,
     chain, multicall
@@ -15,13 +16,12 @@ def init_account(acc):
 
 def get_params():
     '''
+    markets: List of markets that bot will track
     max_ovl: Swap OVL to WETH when account balance crosses this limit
     slippage: Slippage allowed for OVL to WETH swap
     '''
-    return {
-        'max_ovl': 10e18,
-        'slippage': 0.02
-    }
+    f = open('scripts/params/liquidator_params.json')
+    return json.load(f)
 
 
 def get_contract_adds():
@@ -36,22 +36,40 @@ def load_contract(address):
         return Contract.from_explorer(address)
 
 
+def get_market_contracts(markets):
+    return [load_contract(mkt) for mkt in markets]
+
+
 def init_contracts():
     cont_add = get_contract_adds()
-    market = load_contract(cont_add['ovl_market'])
     pool = load_contract(cont_add['univ3_market'])
     swap_router = load_contract(cont_add['swap_router'])
     ovl = load_contract(cont_add['ovl_token'])
     weth = load_contract(cont_add['weth_token'])
     state = load_contract(cont_add['ovl_market_state'])
-    return market, pool, swap_router, ovl, weth, state
+    return pool, swap_router, ovl, weth, state
 
 
-def get_events(market, start_block, end_block):
+def get_event_args(markets, start_block, end_block):
+    args = []
+    for mkt in markets:
+        args.append((mkt, start_block, end_block))
+    return args
+
+
+def get_events(args):
+    (market, start_block, end_block) = args
     events = market.events.get_sequence(
                             from_block=start_block,
                             to_block=end_block)
     return events
+
+
+def arrange_events(all_events):
+    build_events = list(ichain(*[i.Build for i in all_events]))
+    liq_events = list(ichain(*[i.Liquidate for i in all_events]))
+    unw_events = list(ichain(*[i.Unwind for i in all_events]))
+    return build_events, liq_events, unw_events
 
 
 def get_all_pos(bld_events):
@@ -123,22 +141,30 @@ def main(args):
     acc = init_account(args)
     print(f'Account {acc.address} loaded')
     params = get_params()
-    market, pool, swap_router, ovl, weth, state = init_contracts()
+    pool, swap_router, ovl, weth, state = init_contracts()
+    markets = get_market_contracts(params['markets'])
 
     all_pos = []
     prev_liqd_pos = []
     start_block = 10885983
     while True:
         if ovl.balanceOf(acc) >= params['max_ovl']:
-            swap_to_eth(ovl.balanceOf(acc), weth, ovl,
-                        swap_router, pool, params['slippage'], acc)
+            swap_to_eth(ovl.balanceOf(acc), params['slippage'], weth, ovl,
+                        swap_router, pool, acc)
         end_block = chain.height
         if start_block > end_block:
             continue
-        events = get_events(market, start_block, end_block)
-        all_pos += get_all_pos(events.Build)
-        liq_pos = get_liq_pos(events.Liquidate)
-        unw_pos = get_unw_pos(events.Unwind)
+
+        results = []
+        events_args = get_event_args(markets, start_block, end_block)
+        with ThreadPoolExecutor() as executor:
+            for item in executor.map(get_events, events_args):
+                results.append(item)
+        build_events, liq_events, unw_events = arrange_events(results)
+        # events = get_events(markets, start_block, end_block)
+        all_pos += get_all_pos(build_events)
+        liq_pos = get_liq_pos(liq_events)
+        unw_pos = get_unw_pos(unw_events)
         remove_pos = liq_pos + unw_pos + prev_liqd_pos
         all_pos = list(set(all_pos) - set(remove_pos))
 

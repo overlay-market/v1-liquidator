@@ -1,0 +1,6 @@
+{
+    "markets": ["0xdb174A1928a8c58b8676dD1fc93D845519D4FbFe",
+                "0xAE80bEEe4C0aBBC4ea31FE1F7b3B59Fc966aEa23"],
+    "max_ovl": 10e18,
+    "slippage": 0.02
+}
