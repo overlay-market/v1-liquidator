@@ -7,6 +7,7 @@ from brownie import (
 import json
 import math
 import time
+from brownie.network.gas.strategies import GasNowStrategy
 
 
 def init_account(acc):
@@ -42,12 +43,12 @@ def get_market_contracts(markets):
 
 def init_contracts():
     cont_add = get_contract_adds()
-    pool = load_contract(cont_add['univ3_market'])
-    swap_router = load_contract(cont_add['swap_router'])
+    # pool = load_contract(cont_add['univ3_market'])
+    # swap_router = load_contract(cont_add['swap_router'])
     ovl = load_contract(cont_add['ovl_token'])
     weth = load_contract(cont_add['weth_token'])
     state = load_contract(cont_add['ovl_market_state'])
-    return pool, swap_router, ovl, weth, state
+    return ovl, weth, state
 
 
 def get_event_args(markets, start_block, end_block):
@@ -114,11 +115,25 @@ def is_liquidatable(positions, state):
     return list(compress(positions, is_liq))
 
 
-def liquidate_pos(positions, market, acc):
+def get_liq_fee(positions, state):
+    multicall(address='0x5BA1e12693Dc8F9c48aAD8770482f4739bEeD696')
+    with multicall:
+        fee = [state.liquidationFee(pos[0], pos[1], pos[2])
+               for pos in positions]
+    pos_fee = [list(i) for i in zip(positions, fee)]
+    pos_fee.sort(key=lambda x: int(x[1]), reverse=True)
+    return pos_fee
+
+
+def liquidate_pos(positions, acc):
+    gas_strategy = GasNowStrategy("fast")
     liqd_pos = []
     for pos in positions:
-        market.liquidate(pos[1], pos[2], {'from': acc})
+        Contract(pos[0]).liquidate(
+            pos[1], pos[2],
+            {'from': acc, 'gas_price': '12 gwei'})
         liqd_pos.append(pos)
+        time.sleep(1)
     return liqd_pos
 
 
@@ -141,16 +156,16 @@ def main(args):
     acc = init_account(args)
     print(f'Account {acc.address} loaded')
     params = get_params()
-    pool, swap_router, ovl, weth, state = init_contracts()
+    ovl, weth, state = init_contracts()
     markets = get_market_contracts(params['markets'])
 
     all_pos = []
     prev_liqd_pos = []
     start_block = 10885983
     while True:
-        if ovl.balanceOf(acc) >= params['max_ovl']:
-            swap_to_eth(ovl.balanceOf(acc), params['slippage'], weth, ovl,
-                        swap_router, pool, acc)
+        # if ovl.balanceOf(acc) >= params['max_ovl']:
+        #     swap_to_eth(ovl.balanceOf(acc), params['slippage'], weth, ovl,
+        #                 swap_router, pool, acc)
         end_block = chain.height
         if start_block > end_block:
             continue
@@ -169,5 +184,10 @@ def main(args):
         all_pos = list(set(all_pos) - set(remove_pos))
 
         liqable_pos = is_liquidatable(all_pos, state)
-        prev_liqd_pos += liquidate_pos(liqable_pos)
+        liqable_pos = get_liq_fee(liqable_pos, state)
+        liqable_pos = [i[0] for i in liqable_pos if i[1] >= 0]
+        print(f'{len(liqable_pos)} positions to liquidate')
+        if len(liqable_pos) == 0:
+            continue
+        prev_liqd_pos += liquidate_pos(liqable_pos, acc)
         start_block = end_block + 1

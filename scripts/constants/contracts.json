@@ -1,8 +1,8 @@
 {
-    "ovl_market": "0xAE80bEEe4C0aBBC4ea31FE1F7b3B59Fc966aEa23",
-    "univ3_market": "0x13313256d94d0Fd3CEAf628EE40f58900e5B21c7",
-    "ovl_token": "0x82913654067F94b72AEFB10dBC69Ff4Db3F16176",
-    "weth_token": "0xc778417E063141139Fce010982780140Aa0cD5Ab",
-    "swap_router": "0xE592427A0AEce92De3Edee1F18E0157C05861564",
-    "ovl_market_state": "0x11495884878A38709959e1102Ba0e559BE826F4e"
+    "ovl_market": "0x7f72986e190bbd1d02dac52b8dda82eea363d313",
+    "univ3_market": "pending",
+    "ovl_token": "0xdc77acc82cce1cc095cba197474cc06824ade6f7",
+    "weth_token": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+    "swap_router": "pending",
+    "ovl_market_state": "0x477122219aa1F76E190f480a85af97DE0A643320"
 }
