@@ -1,0 +1,8 @@
+{
+    "ovl_market": "0x7f72986e190bbd1d02dac52b8dda82eea363d313",
+    "univ3_market": "pending",
+    "ovl_token": "0xdc77acc82cce1cc095cba197474cc06824ade6f7",
+    "weth_token": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+    "swap_router": "pending",
+    "ovl_market_state": "0x477122219aa1F76E190f480a85af97DE0A643320"
+}
