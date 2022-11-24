@@ -7,7 +7,6 @@ from brownie import (
 import json
 import math
 import time
-from brownie.network.gas.strategies import GasNowStrategy
 
 
 def init_account(acc):
@@ -126,12 +125,11 @@ def get_liq_fee(positions, state):
 
 
 def liquidate_pos(positions, acc):
-    gas_strategy = GasNowStrategy("fast")
     liqd_pos = []
     for pos in positions:
         Contract(pos[0]).liquidate(
             pos[1], pos[2],
-            {'from': acc, 'gas_price': '12 gwei'})
+            {'from': acc, 'gas_price': '26 gwei'})
         liqd_pos.append(pos)
         time.sleep(1)
     return liqd_pos
