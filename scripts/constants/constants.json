@@ -6,7 +6,9 @@
         "weth_token": "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1",
         "swap_router": "pending",
         "ovl_market_state": "0xC3cB99652111e7828f38544E3e94c714D8F9a51a",
-        "markets": ["0x02e5938904014901c96f534b063ec732ea3b48d5", "0x1067b7df86552a53d816ce3fed50d6d01310b48f", "0x33659282d39e62b62060c3f9fb2230e97db15f1e", "0x833ba1a942dc6d33bc3e6959637ae00e0cdcb20b", "0xa811698d855153cc7472d1fb356149a94bd618e7", "0xc28350047d006ed387b0f210d4ea3218137a8a38"]
+        "markets": ["0x02e5938904014901c96f534b063ec732ea3b48d5", "0x1067b7df86552a53d816ce3fed50d6d01310b48f", "0x33659282d39e62b62060c3f9fb2230e97db15f1e", "0x833ba1a942dc6d33bc3e6959637ae00e0cdcb20b", "0xa811698d855153cc7472d1fb356149a94bd618e7", "0xc28350047d006ed387b0f210d4ea3218137a8a38"],
+        "multicall": "0x842eC2c7D803033Edf55E478F461FC547Bc54EB2",
+        "start_block": 65219396
     },
     "ethereum":
     {
@@ -15,6 +17,8 @@
         "weth_token": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
         "swap_router": "pending",
         "ovl_market_state": "0x477122219aa1F76E190f480a85af97DE0A643320",
-        "markets": ["0x7f72986e190BBd1D02daC52b8DdA82eEa363d313", "0x70cb456202e9ad25d3fdf1d0ac5d6b299a42dc99"]
+        "markets": ["0x7f72986e190BBd1D02daC52b8DdA82eEa363d313", "0x70cb456202e9ad25d3fdf1d0ac5d6b299a42dc99"],
+        "multicall": "0x5BA1e12693Dc8F9c48aAD8770482f4739bEeD696",
+        "start_block": 10885983
     }
 }
