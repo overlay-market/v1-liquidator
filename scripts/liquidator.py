@@ -14,19 +14,10 @@ def init_account(acc):
     return acc
 
 
-def get_params():
-    '''
-    markets: List of markets that bot will track
-    max_ovl: Swap OVL to WETH when account balance crosses this limit
-    slippage: Slippage allowed for OVL to WETH swap
-    '''
-    f = open('scripts/params/liquidator_params.json')
-    return json.load(f)
-
-
-def get_contract_adds():
-    f = open('scripts/constants/contracts.json')
-    return json.load(f)
+def get_constants(chain):
+    f = open('scripts/constants/constants.json')
+    const = json.load(f)
+    return const[chain]
 
 
 def load_contract(address):
@@ -40,14 +31,15 @@ def get_market_contracts(markets):
     return [load_contract(mkt) for mkt in markets]
 
 
-def init_contracts():
-    cont_add = get_contract_adds()
-    # pool = load_contract(cont_add['univ3_market'])
-    # swap_router = load_contract(cont_add['swap_router'])
-    ovl = load_contract(cont_add['ovl_token'])
-    weth = load_contract(cont_add['weth_token'])
-    state = load_contract(cont_add['ovl_market_state'])
-    return ovl, weth, state
+def init_state(chain):
+    consts = get_constants(chain)
+    ovl = load_contract(consts['ovl_token'])
+    weth = load_contract(consts['weth_token'])
+    state = load_contract(consts['ovl_market_state'])
+    markets = get_market_contracts(consts['markets'])
+    multicall = consts['multicall']  # Addr used as string
+    start_block = int(consts['start_block'])
+    return ovl, weth, state, markets, multicall, start_block
 
 
 def get_event_args(markets, start_block, end_block):
@@ -106,16 +98,16 @@ def get_unw_pos(unw_events):
     return pos
 
 
-def is_liquidatable(positions, state):
-    multicall(address='0x5BA1e12693Dc8F9c48aAD8770482f4739bEeD696')
+def is_liquidatable(positions, state, mc_addr):
+    multicall(address=mc_addr)
     with multicall:
         is_liq = [state.liquidatable(pos[0], pos[1], pos[2])
                   for pos in positions]
     return list(compress(positions, is_liq))
 
 
-def get_liq_fee(positions, state):
-    multicall(address='0x5BA1e12693Dc8F9c48aAD8770482f4739bEeD696')
+def get_liq_fee(positions, state, mc_addr):
+    multicall(address=mc_addr)
     with multicall:
         fee = [state.liquidationFee(pos[0], pos[1], pos[2])
                for pos in positions]
@@ -129,7 +121,7 @@ def liquidate_pos(positions, acc):
     for pos in positions:
         Contract(pos[0]).liquidate(
             pos[1], pos[2],
-            {'from': acc, 'gas_price': '26 gwei'})
+            {'from': acc, 'priority_fee':"2 gwei"})
         liqd_pos.append(pos)
         time.sleep(1)
     return liqd_pos
@@ -149,17 +141,14 @@ def swap_to_eth(amount, slippage, weth, ovl, router, pool, acc):
     router.exactInputSingle(params, {'from': acc})
 
 
-def main(args):
+def main(acc_name, chain_name):
     # Initialize account and contracts
-    acc = init_account(args)
+    acc = init_account(acc_name)
     print(f'Account {acc.address} loaded')
-    params = get_params()
-    ovl, weth, state = init_contracts()
-    markets = get_market_contracts(params['markets'])
+    _, _, state, markets, multicall, start_block = init_state(chain_name)
 
     all_pos = []
     prev_liqd_pos = []
-    start_block = 10885983
     while True:
         # if ovl.balanceOf(acc) >= params['max_ovl']:
         #     swap_to_eth(ovl.balanceOf(acc), params['slippage'], weth, ovl,
@@ -181,8 +170,8 @@ def main(args):
         remove_pos = liq_pos + unw_pos + prev_liqd_pos
         all_pos = list(set(all_pos) - set(remove_pos))
 
-        liqable_pos = is_liquidatable(all_pos, state)
-        liqable_pos = get_liq_fee(liqable_pos, state)
+        liqable_pos = is_liquidatable(all_pos, state, multicall)
+        liqable_pos = get_liq_fee(liqable_pos, state, multicall)
         liqable_pos = [i[0] for i in liqable_pos if i[1] >= 0]
         print(f'{len(liqable_pos)} positions to liquidate')
         if len(liqable_pos) == 0:
