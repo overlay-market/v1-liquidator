@@ -121,7 +121,7 @@ def liquidate_pos(positions, acc):
     for pos in positions:
         Contract(pos[0]).liquidate(
             pos[1], pos[2],
-            {'from': acc, 'gas_price': '26 gwei'})
+            {'from': acc, 'priority_fee':"2 gwei"})
         liqd_pos.append(pos)
         time.sleep(1)
     return liqd_pos
