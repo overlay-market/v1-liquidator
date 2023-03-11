@@ -51,9 +51,20 @@ def get_event_args(markets, start_block, end_block):
 
 def get_events(args):
     (market, start_block, end_block) = args
-    events = market.events.get_sequence(
-                            from_block=start_block,
-                            to_block=end_block)
+    tries = 1
+    while tries > 0:
+        try:
+            events = market.events.get_sequence(
+                                    from_block=start_block,
+                                    to_block=end_block)
+            tries = 0
+        except Exception as e:
+            err_msg = str(e)
+            print(f"Error: {err_msg}")
+            backoff_interval = (2 ** tries) / 10
+            tries += 1
+            print(f'Sleeping for {backoff_interval} secs')
+            time.sleep(backoff_interval)
     return events
 
 
