@@ -36,6 +36,8 @@ within the local dir.
 ```
 brownie accounts generate my_account
 ```
+Add account password to `scripts/constants/brownie_pass.txt`
+
 2. Infura node (default choice by brownie) is sometimes problematic on arbitrum. So set up brownie to use alchemy node for arbitrum
 ```
 brownie networks add Arbitrum arbi-alc host=https://arb-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_HERE name=arbi-alc chainid=42161 explorer=https://api.arbiscan.io

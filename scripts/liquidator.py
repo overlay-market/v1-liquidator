@@ -10,7 +10,9 @@ import time
 
 
 def init_account(acc):
-    acc = accounts.load(acc)
+    with open('scripts/constants/brownie_pass.txt') as f:
+        brownie_pass = f.read()
+    acc = accounts.load(acc, password=brownie_pass)
     return acc
 
 

@@ -10,3 +10,4 @@ reports/
 *.bk
 notes
 poetry.lock
+brownie_pass.txt
