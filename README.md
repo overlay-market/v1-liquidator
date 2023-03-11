@@ -15,13 +15,13 @@ To run the project you need:
 
 ## Installation
 
-Using [Poetry](https://github.com/python-poetry/poetry) for dependencies. Install with `pipx`
+Using [Poetry](https://python-poetry.org/docs/) for dependencies. Install poetry
 
 ```
-pipx install poetry
+curl -sSL https://install.python-poetry.org | python3 -
 ```
 
-Clone the repo, then
+Clone the repo, then, to install dependencies
 
 ```
 poetry install
@@ -38,7 +38,7 @@ brownie accounts generate my_account
 ```
 2. Infura node (default choice by brownie) is sometimes problematic on arbitrum. So set up brownie to use alchemy node for arbitrum
 ```
-brownie networks add Arbitrum arbi-alc host=https://arb-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_GOES_HERE name=arbi-alc chainid=42161 explorer=https://arbiscan.io/api
+brownie networks add Arbitrum arbi-alc host=https://arb-mainnet.g.alchemy.com/v2/ALCHEMY_API_KEY_HERE name=arbi-alc chainid=42161 explorer=https://api.arbiscan.io
 ```
 ## Run liquidator
 
