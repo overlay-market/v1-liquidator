@@ -7,17 +7,25 @@ from brownie import (
 import json
 import math
 import time
+import os
+
+
+def get_repo_path():
+    script_path = os.path.realpath(__file__)
+    return os.path.abspath(os.path.join(script_path, os.pardir, os.pardir))
 
 
 def init_account(acc):
-    with open('scripts/constants/brownie_pass.txt') as f:
+    repo_path = get_repo_path()
+    with open(repo_path + '/scripts/constants/brownie_pass.txt') as f:
         brownie_pass = f.read()
     acc = accounts.load(acc, password=brownie_pass)
     return acc
 
 
 def get_constants(chain):
-    f = open('scripts/constants/constants.json')
+    repo_path = get_repo_path()
+    f = open(repo_path + '/scripts/constants/constants.json')
     const = json.load(f)
     return const[chain]
 
