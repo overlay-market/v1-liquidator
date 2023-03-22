@@ -8,33 +8,55 @@ import json
 import math
 import time
 import os
+import sys
 
 
-def get_repo_path():
+def get_constants_path():
     script_path = os.path.realpath(__file__)
-    return os.path.abspath(os.path.join(script_path, os.pardir, os.pardir))
+    repo = os.path.abspath(os.path.join(script_path, os.pardir, os.pardir))
+    return repo + '/scripts/constants/'
 
 
 def init_account(acc):
-    repo_path = get_repo_path()
-    with open(repo_path + '/scripts/constants/brownie_pass.txt') as f:
+    with open(get_constants_path() + 'brownie_pass.txt') as f:
         brownie_pass = f.read()
     acc = accounts.load(acc, password=brownie_pass)
     return acc
 
 
+def read_json(filename):
+    constants_path = get_constants_path()
+    f = open(constants_path + filename)
+    return json.load(f)
+
+
 def get_constants(chain):
-    repo_path = get_repo_path()
-    f = open(repo_path + '/scripts/constants/constants.json')
-    const = json.load(f)
+    const = read_json('constants.json')
     return const[chain]
+
+
+def get_abis():
+    return read_json('abis.json')
 
 
 def load_contract(address):
     try:
         return Contract(address)
-    except ValueError:
-        return Contract.from_explorer(address)
+    except Exception as e:
+        print(f'Unable to load address {address} from cache')
+        print(f"Error: {str(e)}")
+        try:
+            return Contract.from_explorer(address)
+        except Exception as e:
+            print(f'Unable to load address {address} from block explorer')
+            print(f"Error: {str(e)}")
+            abis = get_abis()
+            if address not in abis.keys():
+                print(f'Address abi unavailable. Unable to load {address}')
+                sys.exit()
+            else:
+                abi = abis[address]
+                return Contract.from_abi('contract', address, abi)
 
 
 def get_market_contracts(markets):
