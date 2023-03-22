@@ -74,6 +74,26 @@ def init_state(chain):
     return ovl, weth, state, markets, multicall, start_block
 
 
+def try_with_backoff(func):
+    '''
+    Try running function with exponential backoff.
+    Used for making Web API calls here
+    '''
+    tries = 1
+    while tries > 0:
+        try:
+            result = func()
+            tries = 0
+        except Exception as e:
+            err_msg = str(e)
+            print(f"Error: {err_msg}")
+            backoff_interval = (2 ** tries) / 10
+            tries += 1
+            print(f'Sleeping for {backoff_interval} secs')
+            time.sleep(backoff_interval)
+    return result
+
+
 def get_event_args(markets, start_block, end_block):
     args = []
     for mkt in markets:
@@ -83,20 +103,9 @@ def get_event_args(markets, start_block, end_block):
 
 def get_events(args):
     (market, start_block, end_block) = args
-    tries = 1
-    while tries > 0:
-        try:
-            events = market.events.get_sequence(
-                                    from_block=start_block,
-                                    to_block=end_block)
-            tries = 0
-        except Exception as e:
-            err_msg = str(e)
-            print(f"Error: {err_msg}")
-            backoff_interval = (2 ** tries) / 10
-            tries += 1
-            print(f'Sleeping for {backoff_interval} secs')
-            time.sleep(backoff_interval)
+    events = try_with_backoff(lambda: market.events.get_sequence(
+                                    from_block=start_block, 
+                                    to_block=end_block))
     return events
 
 
@@ -213,8 +222,12 @@ def main(acc_name, chain_name):
         remove_pos = liq_pos + unw_pos + prev_liqd_pos
         all_pos = list(set(all_pos) - set(remove_pos))
 
-        liqable_pos = is_liquidatable(all_pos, state, multicall)
-        liqable_pos = get_liq_fee(liqable_pos, state, multicall)
+        liqable_pos = try_with_backoff(
+            lambda: is_liquidatable(all_pos, state, multicall)
+        )
+        liqable_pos = try_with_backoff(
+            lambda: get_liq_fee(liqable_pos, state, multicall)
+        )
         liqable_pos = [i[0] for i in liqable_pos if i[1] >= 0]
         print(f'{len(liqable_pos)} positions to liquidate')
         if len(liqable_pos) == 0:
