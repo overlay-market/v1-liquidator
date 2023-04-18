@@ -1,3 +1,6 @@
+import asyncio
+from telegram import Bot
+import traceback
 from concurrent.futures import ThreadPoolExecutor
 from itertools import compress, chain as ichain
 from brownie import (
@@ -25,10 +28,15 @@ def get_constants_path():
     return repo + '/scripts/constants/'
 
 
-def init_account(acc):
-    with open(get_constants_path() + 'brownie_pass.txt') as f:
-        brownie_pass = f.read()
-    acc = accounts.load(acc, password=brownie_pass)
+async def send_telegram_message(message, bot_token, chat_id):
+    with open(get_constants_path() + 'telegram_token.txt') as f:
+        bot_token = f.read()
+    bot = Bot(token=bot_token)
+    await bot.send_message(chat_id=chat_id, text=message)
+
+
+def init_account(acc, password):
+    acc = accounts.load(acc, password=password)
     return acc
 
 
@@ -206,46 +214,64 @@ def swap_to_eth(amount, slippage, weth, ovl, router, pool, acc):
 
 
 def main(acc_name, chain_name):
-    # Initialize account and contracts
-    acc = init_account(acc_name)
-    print_w_time(f'Account {acc.address} loaded')
-    _, _, state, markets, multicall, start_block = init_state(chain_name)
+    secrets = read_json('secrets.json')
+    try:
+        # Initialize account and contracts
+        acc = init_account(acc_name, secrets['brownie_pass'])
+        print_w_time(f'Account {acc.address} loaded')
+        _, _, state, markets, multicall, start_block = init_state(chain_name)
 
-    all_pos = []
-    prev_liqd_pos = []
-    while True:
-        # if ovl.balanceOf(acc) >= params['max_ovl']:
-        #     swap_to_eth(ovl.balanceOf(acc), params['slippage'], weth, ovl,
-        #                 swap_router, pool, acc)
-        end_block = chain.height
-        if start_block > end_block:
-            continue
+        all_pos = []
+        prev_liqd_pos = []
+        while True:
+            # if ovl.balanceOf(acc) >= params['max_ovl']:
+            #     swap_to_eth(ovl.balanceOf(acc), params['slippage'], weth, ovl,
+            #                 swap_router, pool, acc)
+            end_block = chain.height
+            if start_block > end_block:
+                continue
 
-        results = []
-        events_args = get_event_args(markets, start_block, end_block)
-        with ThreadPoolExecutor() as executor:
-            for item in executor.map(get_events, events_args):
-                results.append(item)
-        build_events, liq_events, unw_events = arrange_events(results)
-        # events = get_events(markets, start_block, end_block)
-        all_pos += get_all_pos(build_events)
-        liq_pos = get_liq_pos(liq_events)
-        unw_pos = get_unw_pos(unw_events)
-        remove_pos = liq_pos + unw_pos + prev_liqd_pos
-        all_pos = list(set(all_pos) - set(remove_pos))
+            results = []
+            events_args = get_event_args(markets, start_block, end_block)
+            with ThreadPoolExecutor() as executor:
+                for item in executor.map(get_events, events_args):
+                    results.append(item)
+            build_events, liq_events, unw_events = arrange_events(results)
+            # events = get_events(markets, start_block, end_block)
+            all_pos += get_all_pos(build_events)
+            liq_pos = get_liq_pos(liq_events)
+            unw_pos = get_unw_pos(unw_events)
+            remove_pos = liq_pos + unw_pos + prev_liqd_pos
+            all_pos = list(set(all_pos) - set(remove_pos))
 
-        liqable_pos = try_with_backoff(
-            lambda: is_liquidatable(all_pos, state, multicall)
+            liqable_pos = try_with_backoff(
+                lambda: is_liquidatable(all_pos, state, multicall)
+            )
+            liqable_pos = try_with_backoff(
+                lambda: get_liq_fee(liqable_pos, state, multicall)
+            )
+            liqable_pos = [i[0] for i in liqable_pos if i[1] >= 0]
+            print_w_time(f'{len(liqable_pos)} positions to liquidate')
+            if len(liqable_pos) == 0:
+                sleep_time = 120
+                print_w_time(f'Sleeping for {sleep_time} secs')
+                time.sleep(sleep_time)  # Sleep for 2 mins when 0 pos to liquidate
+                continue
+            prev_liqd_pos += liquidate_pos(liqable_pos, acc)
+            start_block = end_block + 1
+    except Exception as e:
+        error_message = traceback.format_exc()
+        bot_message = (
+            f'''
+            LIQUIDATOR BOT STOPPED
+            Error: {error_message}
+            '''
         )
-        liqable_pos = try_with_backoff(
-            lambda: get_liq_fee(liqable_pos, state, multicall)
+        print_w_time(bot_message)
+        asyncio.run(
+            send_telegram_message(
+                bot_message,
+                secrets['telegram_token'],
+                secrets['telegram_chat_id']
+            )
         )
-        liqable_pos = [i[0] for i in liqable_pos if i[1] >= 0]
-        print_w_time(f'{len(liqable_pos)} positions to liquidate')
-        if len(liqable_pos) == 0:
-            sleep_time = 120
-            print_w_time(f'Sleeping for {sleep_time} secs')
-            time.sleep(sleep_time)  # Sleep for 2 mins when 0 pos to liquidate
-            continue
-        prev_liqd_pos += liquidate_pos(liqable_pos, acc)
-        start_block = end_block + 1
