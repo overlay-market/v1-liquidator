@@ -214,7 +214,6 @@ def swap_to_eth(amount, slippage, weth, ovl, router, pool, acc):
 def main(acc_name, chain_name):
     secrets = read_json('secrets.json')
     try:
-        asdf
         # Initialize account and contracts
         acc = init_account(acc_name, secrets['brownie_pass'])
         print_w_time(f'Account {acc.address} loaded')
