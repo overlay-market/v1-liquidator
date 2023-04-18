@@ -9,6 +9,14 @@ import math
 import time
 import os
 import sys
+import datetime
+
+
+def print_w_time(string):
+    gmt_offset = datetime.timezone(datetime.timedelta(hours=0))
+    current_time =\
+        datetime.datetime.now(gmt_offset).strftime('%Y-%m-%d %H:%M:%S')
+    print(f"[{current_time} GMT] {string}")
 
 
 def get_constants_path():
@@ -43,16 +51,20 @@ def load_contract(address):
     try:
         return Contract(address)
     except Exception as e:
-        print(f'Unable to load address {address} from cache')
-        print(f"Error: {str(e)}")
+        print_w_time(f'Unable to load address {address} from cache')
+        print_w_time(f"Error: {str(e)}")
         try:
             return Contract.from_explorer(address)
         except Exception as e:
-            print(f'Unable to load address {address} from block explorer')
-            print(f"Error: {str(e)}")
+            print_w_time(
+                f'Unable to load address {address} from block explorer'
+            )
+            print_w_time(f"Error: {str(e)}")
             abis = get_abis()
             if address not in abis.keys():
-                print(f'Address abi unavailable. Unable to load {address}')
+                print_w_time(
+                    f'Address abi unavailable. Unable to load {address}'
+                )
                 sys.exit()
             else:
                 abi = abis[address]
@@ -86,10 +98,10 @@ def try_with_backoff(func):
             tries = 0
         except Exception as e:
             err_msg = str(e)
-            print(f"Error: {err_msg}")
+            print_w_time(f"Error: {err_msg}")
             backoff_interval = (2 ** tries) / 10
             tries += 1
-            print(f'Sleeping for {backoff_interval} secs')
+            print_w_time(f'Sleeping for {backoff_interval} secs')
             time.sleep(backoff_interval)
     return result
 
@@ -196,7 +208,7 @@ def swap_to_eth(amount, slippage, weth, ovl, router, pool, acc):
 def main(acc_name, chain_name):
     # Initialize account and contracts
     acc = init_account(acc_name)
-    print(f'Account {acc.address} loaded')
+    print_w_time(f'Account {acc.address} loaded')
     _, _, state, markets, multicall, start_block = init_state(chain_name)
 
     all_pos = []
@@ -229,8 +241,9 @@ def main(acc_name, chain_name):
             lambda: get_liq_fee(liqable_pos, state, multicall)
         )
         liqable_pos = [i[0] for i in liqable_pos if i[1] >= 0]
-        print(f'{len(liqable_pos)} positions to liquidate')
+        print_w_time(f'{len(liqable_pos)} positions to liquidate')
         if len(liqable_pos) == 0:
+            time.sleep(120)  # Sleep for 2 mins if there's nothing to liquidate
             continue
         prev_liqd_pos += liquidate_pos(liqable_pos, acc)
         start_block = end_block + 1
