@@ -243,7 +243,9 @@ def main(acc_name, chain_name):
         liqable_pos = [i[0] for i in liqable_pos if i[1] >= 0]
         print_w_time(f'{len(liqable_pos)} positions to liquidate')
         if len(liqable_pos) == 0:
-            time.sleep(120)  # Sleep for 2 mins if there's nothing to liquidate
+            sleep_time = 120
+            print_w_time(f'Sleeping for {sleep_time} secs')
+            time.sleep(sleep_time)  # Sleep for 2 mins when 0 pos to liquidate
             continue
         prev_liqd_pos += liquidate_pos(liqable_pos, acc)
         start_block = end_block + 1
