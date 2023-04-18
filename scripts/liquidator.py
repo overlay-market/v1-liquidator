@@ -29,8 +29,6 @@ def get_constants_path():
 
 
 async def send_telegram_message(message, bot_token, chat_id):
-    with open(get_constants_path() + 'telegram_token.txt') as f:
-        bot_token = f.read()
     bot = Bot(token=bot_token)
     await bot.send_message(chat_id=chat_id, text=message)
 
@@ -216,6 +214,7 @@ def swap_to_eth(amount, slippage, weth, ovl, router, pool, acc):
 def main(acc_name, chain_name):
     secrets = read_json('secrets.json')
     try:
+        asdf
         # Initialize account and contracts
         acc = init_account(acc_name, secrets['brownie_pass'])
         print_w_time(f'Account {acc.address} loaded')
