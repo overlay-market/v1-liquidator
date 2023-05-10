@@ -19,7 +19,7 @@ def print_w_time(string):
     gmt_offset = datetime.timezone(datetime.timedelta(hours=0))
     current_time =\
         datetime.datetime.now(gmt_offset).strftime('%Y-%m-%d %H:%M:%S')
-    print(f"[{current_time} GMT] {string}")
+    print(f"[{current_time} GMT] {string}", flush=True)
 
 
 def get_constants_path():
@@ -189,11 +189,15 @@ def get_liq_fee(positions, state, mc_addr):
 def liquidate_pos(positions, acc):
     liqd_pos = []
     for pos in positions:
-        Contract(pos[0]).liquidate(
-            pos[1], pos[2],
-            {'from': acc, 'priority_fee':"2 gwei"})
-        liqd_pos.append(pos)
-        time.sleep(1)
+        try:
+            Contract(pos[0]).liquidate(
+                pos[1], pos[2],
+                {'from': acc, 'priority_fee':"2 gwei"})
+            liqd_pos.append(pos)
+        except ValueError:
+            error_message = traceback.format_exc()
+            print_w_time(f"Unable to liquidate: {error_message}")
+        time.sleep(0.5)
     return liqd_pos
 
 
@@ -231,31 +235,30 @@ def main(acc_name, chain_name):
 
             results = []
             events_args = get_event_args(markets, start_block, end_block)
+            print_w_time(
+                f'Obtained data from blocks {start_block} to {end_block}'
+            )
             with ThreadPoolExecutor() as executor:
                 for item in executor.map(get_events, events_args):
                     results.append(item)
             build_events, liq_events, unw_events = arrange_events(results)
-            # events = get_events(markets, start_block, end_block)
             all_pos += get_all_pos(build_events)
             liq_pos = get_liq_pos(liq_events)
             unw_pos = get_unw_pos(unw_events)
             remove_pos = liq_pos + unw_pos + prev_liqd_pos
             all_pos = list(set(all_pos) - set(remove_pos))
+            print_w_time(f'Tracking {len(all_pos)} positions')
 
             liqable_pos = try_with_backoff(
                 lambda: is_liquidatable(all_pos, state, multicall)
             )
-            liqable_pos = try_with_backoff(
-                lambda: get_liq_fee(liqable_pos, state, multicall)
-            )
-            liqable_pos = [i[0] for i in liqable_pos if i[1] >= 0]
+            # liqable_pos = try_with_backoff(
+            #     lambda: get_liq_fee(liqable_pos, state, multicall)
+            # )
+            # liqable_pos = [i[0] for i in liqable_pos if i[1] >= 0]
             print_w_time(f'{len(liqable_pos)} positions to liquidate')
-            if len(liqable_pos) == 0:
-                sleep_time = 120
-                print_w_time(f'Sleeping for {sleep_time} secs')
-                time.sleep(sleep_time)  # Sleep for 2 mins when 0 pos to liquidate
-                continue
-            prev_liqd_pos += liquidate_pos(liqable_pos, acc)
+            if len(liqable_pos) > 0:
+                prev_liqd_pos += liquidate_pos(liqable_pos, acc)
             start_block = end_block + 1
     except Exception as e:
         error_message = traceback.format_exc()
