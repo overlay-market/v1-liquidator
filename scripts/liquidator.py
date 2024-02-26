@@ -84,12 +84,11 @@ def get_market_contracts(markets):
 def init_state(chain):
     consts = get_constants(chain)
     ovl = load_contract(consts['ovl_token'])
-    weth = load_contract(consts['weth_token'])
     state = load_contract(consts['ovl_market_state'])
     markets = get_market_contracts(consts['markets'])
     multicall = consts['multicall']  # Addr used as string
     start_block = int(consts['start_block'])
-    return ovl, weth, state, markets, multicall, start_block
+    return ovl, state, markets, multicall, start_block
 
 
 def try_with_backoff(func):
@@ -221,7 +220,7 @@ def main(acc_name, chain_name):
         # Initialize account and contracts
         acc = init_account(acc_name, secrets['brownie_pass'])
         print_w_time(f'Account {acc.address} loaded')
-        _, _, state, markets, multicall, start_block = init_state(chain_name)
+        _, state, markets, multicall, start_block = init_state(chain_name)
 
         all_pos = []
         prev_liqd_pos = []
@@ -269,10 +268,10 @@ def main(acc_name, chain_name):
             '''
         )
         print_w_time(bot_message)
-        asyncio.run(
-            send_telegram_message(
-                bot_message,
-                secrets['telegram_token'],
-                secrets['telegram_chat_id']
-            )
-        )
+#        asyncio.run(
+#            send_telegram_message(
+#                bot_message,
+#                secrets['telegram_token'],
+#                secrets['telegram_chat_id']
+#            )
+#        )
