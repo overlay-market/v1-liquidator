@@ -191,7 +191,7 @@ def liquidate_pos(positions, acc):
         try:
             Contract(pos[0]).liquidate(
                 pos[1], pos[2],
-                {'from': acc, 'priority_fee':"2 gwei"})
+                {'from': acc, 'priority_fee': "2 gwei"})
             liqd_pos.append(pos)
         except ValueError:
             error_message = traceback.format_exc()
@@ -229,6 +229,8 @@ def main(acc_name, chain_name):
             #     swap_to_eth(ovl.balanceOf(acc), params['slippage'], weth, ovl,
             #                 swap_router, pool, acc)
             end_block = chain.height
+            if end_block - start_block > 1_000_000:
+                end_block = start_block + 1_000_000
             if start_block > end_block:
                 continue
 
@@ -248,9 +250,14 @@ def main(acc_name, chain_name):
             all_pos = list(set(all_pos) - set(remove_pos))
             print_w_time(f'Tracking {len(all_pos)} positions')
 
-            liqable_pos = try_with_backoff(
-                lambda: is_liquidatable(all_pos, state, multicall)
-            )
+            # Divide all_pos into chunks of 1000
+            liqable_pos = []
+            for i in range(0, len(all_pos), 1000):
+                liqable_pos += try_with_backoff(
+                    lambda: is_liquidatable(
+                        all_pos[i:i+1000], state, multicall)
+                )
+
             # liqable_pos = try_with_backoff(
             #     lambda: get_liq_fee(liqable_pos, state, multicall)
             # )
