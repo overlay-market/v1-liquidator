@@ -275,10 +275,10 @@ def main(acc_name, chain_name):
             '''
         )
         print_w_time(bot_message)
-#        asyncio.run(
-#            send_telegram_message(
-#                bot_message,
-#                secrets['telegram_token'],
-#                secrets['telegram_chat_id']
-#            )
-#        )
+        asyncio.run(
+            send_telegram_message(
+                bot_message,
+                secrets['telegram_token'],
+                secrets['telegram_chat_id']
+            )
+        )
