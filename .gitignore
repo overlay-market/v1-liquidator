@@ -11,3 +11,4 @@ reports/
 notes
 poetry.lock
 secrets.json
+telegram.json
