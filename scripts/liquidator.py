@@ -242,7 +242,7 @@ def main(acc_name, chain_name):
             all_pos = []
             prev_liqd_pos = []
             bot_message = (
-                f'''LIQUIDATOR BOT STARTED: {acc.address}'''
+                f'''LIQUIDATOR {acc.address} STARTED'''
             )
             send_message(bot_message)
             while True:
@@ -287,7 +287,7 @@ def main(acc_name, chain_name):
             error_message = traceback.format_exc()
             bot_message = (
                 f'''
-                LIQUIDATOR BOT STOPPED
+                LIQUIDATOR {acc.address} STOPPED
                 Error: {error_message}
                 Attempting to restart in 5 minutes...
                 '''
@@ -298,7 +298,8 @@ def main(acc_name, chain_name):
             if attempt_count >= MAX_ATTEMPTS:
                 bot_message = (
                     f'''
-                    LIQUIDATOR BOT STOPPED after {MAX_ATTEMPTS} attempts
+                    LIQUIDATOR {acc.address} STOPPED after {MAX_ATTEMPTS}
+                     attempts
                     Maximum attempt limit reached. Exiting...
                     '''
                 )
