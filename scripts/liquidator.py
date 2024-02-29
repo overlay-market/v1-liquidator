@@ -285,7 +285,7 @@ def main(acc_name, chain_name):
                 attempt_count = 0
                 # Inform if balance is low once every 6 hours
                 alert_time = time.time()
-                if acc.balance() < 5e17 & time.time() - alert_time > 21600:
+                if acc.balance() < 5e17 and time.time() - alert_time > 21600:
                     bot_message = (
                         f'''
                         LIQUIDATOR {acc.address} LOW BALANCE
