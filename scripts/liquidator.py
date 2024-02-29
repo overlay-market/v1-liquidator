@@ -283,7 +283,9 @@ def main(acc_name, chain_name):
                     prev_liqd_pos += liquidate_pos(liqable_pos, acc)
                 start_block = end_block + 1
                 attempt_count = 0
-                if acc.balance() < 5e17:
+                # Inform if balance is low once every 6 hours
+                alert_time = time.time()
+                if acc.balance() < 5e17 & time.time() - alert_time > 21600:
                     bot_message = (
                         f'''
                         LIQUIDATOR {acc.address} LOW BALANCE
@@ -291,7 +293,6 @@ def main(acc_name, chain_name):
                         '''
                     )
                     send_message(bot_message)
-                    break
         except Exception:
             error_message = traceback.format_exc()
             bot_message = (
