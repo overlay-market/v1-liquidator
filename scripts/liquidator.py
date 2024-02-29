@@ -247,8 +247,8 @@ def main(acc_name, chain_name):
             send_message(bot_message)
             while True:
                 # if ovl.balanceOf(acc) >= params['max_ovl']:
-                #     swap_to_eth(ovl.balanceOf(acc), params['slippage'], weth, ovl,
-                #                 swap_router, pool, acc)
+                #     swap_to_eth(ovl.balanceOf(acc), params['slippage'], weth,
+                #     ovl, swap_router, pool, acc)
                 end_block = chain.height
                 if end_block - start_block > 1_000_000:
                     end_block = start_block + 1_000_000
@@ -283,6 +283,15 @@ def main(acc_name, chain_name):
                     prev_liqd_pos += liquidate_pos(liqable_pos, acc)
                 start_block = end_block + 1
                 attempt_count = 0
+                if acc.balance() < 5e17:
+                    bot_message = (
+                        f'''
+                        LIQUIDATOR {acc.address} LOW BALANCE
+                        Current balance: {acc.balance() / 1e18} ETH
+                        '''
+                    )
+                    send_message(bot_message)
+                    break
         except Exception:
             error_message = traceback.format_exc()
             bot_message = (
