@@ -78,13 +78,13 @@ def get_market_contracts(markets):
     return [load_contract(mkt) for mkt in markets]
 
 
-def init_state(chain):
+def init_state(chain, market_subset):
     consts = get_constants(chain)
     ovl = load_contract(consts['ovl_token'])
     state = load_contract(consts['ovl_market_state'])
-    markets = get_market_contracts(consts['markets'])
+    markets = get_market_contracts(consts['markets'][market_subset])
     multicall = consts['multicall']  # Addr used as string
-    start_block = int(consts['start_block'])
+    start_block = int(consts['start_block'][market_subset])
     return ovl, state, markets, multicall, start_block
 
 
@@ -211,47 +211,61 @@ def swap_to_eth(amount, slippage, weth, ovl, router, pool, acc):
     router.exactInputSingle(params, {'from': acc})
 
 
-def send_message(bot_message):
+def send_message(bot_message, notify):
     telegram = read_json('telegram.json')
     print_w_time(bot_message)
     asyncio.run(
         send_telegram_message(
             bot_message,
             telegram['telegram_token'],
-            telegram['telegram_chat_id']
+            telegram['telegram_chat_id'],
+            notify
         )
     )
 
 
-async def send_telegram_message(message, bot_token, chat_id):
+async def send_telegram_message(message, bot_token, chat_id, notify):
     bot = Bot(token=bot_token)
-    await bot.send_message(chat_id=chat_id, text=message)
+    await bot.send_message(
+        chat_id=chat_id,
+        text=message,
+        disable_notification=notify
+        )
 
 
-def main(acc_name, chain_name):
+def main(acc_name, chain_name, market_subset):
     secrets = read_json('secrets.json')
     attempt_count = 0
-
+    last_notification_timestamp = 0
+    market_subset_int = int(market_subset)
     while True:
         try:
             # Initialize account and contracts
             acc = init_account(acc_name, secrets['brownie_pass'])
             print_w_time(f'Account {acc.address} loaded')
-            _, state, markets, multicall, start_block = init_state(chain_name)
+            _, state, markets, multicall, start_block = init_state(
+                chain_name,
+                market_subset_int
+                )
 
             all_pos = []
             prev_liqd_pos = []
+
+            markets_str = '\n'.join(
+                [f'{market.address}' for market in markets]
+                )
             bot_message = (
-                f'''LIQUIDATOR {acc.address} STARTED'''
+                f'LIQUIDATOR {acc.address} STARTED\n'
+                f'FOR MARKETS {markets_str}\n'
             )
-            send_message(bot_message)
+            send_message(bot_message, False)
             while True:
                 # if ovl.balanceOf(acc) >= params['max_ovl']:
                 #     swap_to_eth(ovl.balanceOf(acc), params['slippage'], weth,
                 #     ovl, swap_router, pool, acc)
                 end_block = chain.height
-                if end_block - start_block > 1_000_000:
-                    end_block = start_block + 1_000_000
+                if end_block - start_block > 100_000:
+                    end_block = start_block + 100_000
                 if start_block > end_block:
                     continue
 
@@ -270,7 +284,15 @@ def main(acc_name, chain_name):
                 remove_pos = liq_pos + unw_pos + prev_liqd_pos
                 all_pos = list(set(all_pos) - set(remove_pos))
                 print_w_time(f'Tracking {len(all_pos)} positions')
-
+                # Notify to telegram the amount of positions being tracked
+                # once every 6 hours
+                if time.time() - last_notification_timestamp > 21600:
+                    bot_message = (
+                        f'LIQUIDATOR {acc.address} TRACKING {len(all_pos)} '
+                        f'POSITIONS'
+                    )
+                    send_message(bot_message, True)
+                    last_notification_timestamp = time.time()
                 # Divide all_pos into chunks of 1000
                 liqable_pos = []
                 for i in range(0, len(all_pos), 1000):
@@ -292,7 +314,7 @@ def main(acc_name, chain_name):
                         Current balance: {acc.balance() / 1e18} ETH
                         '''
                     )
-                    send_message(bot_message)
+                    send_message(bot_message, True)
         except Exception:
             error_message = traceback.format_exc()
             bot_message = (
@@ -302,7 +324,7 @@ def main(acc_name, chain_name):
                 Attempting to restart in 5 minutes...
                 '''
             )
-            send_message(bot_message)
+            send_message(bot_message, False)
             attempt_count += 1
             time.sleep(300)
             if attempt_count >= MAX_ATTEMPTS:
@@ -313,4 +335,5 @@ def main(acc_name, chain_name):
                     Maximum attempt limit reached. Exiting...
                     '''
                 )
+                send_message(bot_message, False)
                 break
