@@ -118,7 +118,7 @@ def get_event_args(markets, start_block, end_block):
 def get_events(args):
     (market, start_block, end_block) = args
     events = try_with_backoff(lambda: market.events.get_sequence(
-                                    from_block=start_block, 
+                                    from_block=start_block,
                                     to_block=end_block))
     return events
 
@@ -256,9 +256,9 @@ def main(acc_name, chain_name, market_subset):
                 )
             bot_message = (
                 f'LIQUIDATOR {acc.address} STARTED\n'
-                f'FOR MARKETS {markets_str}\n'
+                f'FOR MARKETS \n{markets_str}'
             )
-            send_message(bot_message, False)
+            send_message(bot_message, True)
             while True:
                 # if ovl.balanceOf(acc) >= params['max_ovl']:
                 #     swap_to_eth(ovl.balanceOf(acc), params['slippage'], weth,
