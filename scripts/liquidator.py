@@ -310,7 +310,7 @@ def main(acc_name, chain_name, market_subset):
                 if acc.balance() < 5e17 and time.time() - alert_time > 21600:
                     bot_message = (
                         f'''
-                        LIQUIDATOR {acc.address} LOW BALANCE
+                        💸💸💸 LIQUIDATOR {acc.address} LOW BALANCE
                         Current balance: {acc.balance() / 1e18} ETH
                         '''
                     )
@@ -319,7 +319,7 @@ def main(acc_name, chain_name, market_subset):
             error_message = traceback.format_exc()
             bot_message = (
                 f'''
-                LIQUIDATOR {acc.address} STOPPED
+                🛑🛑🛑 LIQUIDATOR {acc.address} STOPPED
                 Error: {error_message}
                 Attempting to restart in 5 minutes...
                 '''
@@ -330,7 +330,7 @@ def main(acc_name, chain_name, market_subset):
             if attempt_count >= MAX_ATTEMPTS:
                 bot_message = (
                     f'''
-                    LIQUIDATOR {acc.address} STOPPED after {MAX_ATTEMPTS}
+                    💀💀💀 LIQUIDATOR {acc.address} STOPPED after {MAX_ATTEMPTS}
                      attempts
                     Maximum attempt limit reached. Exiting...
                     '''
