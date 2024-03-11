@@ -211,17 +211,27 @@ def swap_to_eth(amount, slippage, weth, ovl, router, pool, acc):
     router.exactInputSingle(params, {'from': acc})
 
 
-def send_message(bot_message, notify):
+def send_message(bot_message, notify, muted):
     telegram = read_json('telegram.json')
     print_w_time(bot_message)
-    asyncio.run(
-        send_telegram_message(
-            bot_message,
-            telegram['telegram_token'],
-            telegram['telegram_chat_id'],
-            notify
+    if not muted:
+        asyncio.run(
+            send_telegram_message(
+                bot_message,
+                telegram['telegram_token'],
+                telegram['telegram_chat_id'],
+                notify
+            )
         )
-    )
+    else:
+        asyncio.run(
+            send_telegram_message(
+                bot_message,
+                telegram['muted_telegram_token'],
+                telegram['muted_telegram_chat_id'],
+                notify
+            )
+        )        
 
 
 async def send_telegram_message(message, bot_token, chat_id, notify):
@@ -258,7 +268,7 @@ def main(acc_name, chain_name, market_subset):
                 f'LIQUIDATOR {acc.address} STARTED\n'
                 f'FOR MARKETS \n{markets_str}'
             )
-            send_message(bot_message, True)
+            send_message(bot_message, True, True)
             while True:
                 # if ovl.balanceOf(acc) >= params['max_ovl']:
                 #     swap_to_eth(ovl.balanceOf(acc), params['slippage'], weth,
@@ -291,7 +301,7 @@ def main(acc_name, chain_name, market_subset):
                         f'LIQUIDATOR {acc.address} TRACKING {len(all_pos)} '
                         f'POSITIONS'
                     )
-                    send_message(bot_message, True)
+                    send_message(bot_message, True, True)
                     last_notification_timestamp = time.time()
                 # Divide all_pos into chunks of 1000
                 liqable_pos = []
@@ -314,7 +324,7 @@ def main(acc_name, chain_name, market_subset):
                         Current balance: {acc.balance() / 1e18} ETH
                         '''
                     )
-                    send_message(bot_message, True)
+                    send_message(bot_message, True, False)
         except Exception:
             error_message = traceback.format_exc()
             bot_message = (
@@ -324,7 +334,7 @@ def main(acc_name, chain_name, market_subset):
                 Attempting to restart in 5 minutes...
                 '''
             )
-            send_message(bot_message, False)
+            send_message(bot_message, False, False)
             attempt_count += 1
             time.sleep(300)
             if attempt_count >= MAX_ATTEMPTS:
@@ -335,5 +345,5 @@ def main(acc_name, chain_name, market_subset):
                     Maximum attempt limit reached. Exiting...
                     '''
                 )
-                send_message(bot_message, False)
+                send_message(bot_message, False, False)
                 break
